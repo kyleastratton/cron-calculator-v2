@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Due Date Calculator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/later/1.2.0/later.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+            width: 400px;
+            text-align: center;
+        }
+        input, button {
+            width: 100%;
+            margin: 10px 0;
+            padding: 10px;
+            font-size: 16px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .result {
+            margin-top: 15px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Due Date Calculator</h2>
+        <label>Creation Date/Time:</label>
+        <input type="datetime-local" id="creationDateTime">
+        
+        <label>Cron Expression:</label>
+        <input type="text" id="cronExpression" placeholder="e.g. 0 30 17 * * *" value="0 0 17 * * *">
+        
+        <label>Threshold (minutes):</label>
+        <input type="number" id="threshold" placeholder="e.g. 60" value="60">
+        
+        <button onclick="calculateDueDate()">Calculate Due Date</button>
+        
+        <div class="result" id="result"></div>
+    </div>
+
+    <script>
+        // Set current datetime as default for creation time
+        document.getElementById('creationDateTime').value = new Date().toISOString().slice(0, 16); 
+
+
+        function calculateDueDate() {
+            const creationDate = new Date(document.getElementById('creationDateTime').value);
+            const cronExpression = document.getElementById('cronExpression').value;
+            const threshold = parseInt(document.getElementById('threshold').value, 10) || 0;
+
+            if (isNaN(creationDate.getTime())) {
+                document.getElementById('result').innerText = "Invalid creation date!";
+                return;
+            }
+
+            try {
+                // Parse cron schedule
+                const schedule = later.parse.cron(cronExpression, true);
+                let nextRun = later.schedule(schedule).next(1, creationDate);
+
+                // Calculate the threshold boundary
+                let thresholdBoundary = new Date(creationDate.getTime() + threshold * 60000);
+                console.log("creationTime: ", creationDate.getTime());
+                console.log("threshold: ", threshold * 60000);
+                console.log("thresholdBoundary: ", thresholdBoundary);
+                console.log("nextRun: ", nextRun);
+                console.log("Result: ", thresholdBoundary > nextRun);
+
+                // Adjust the due date based on the new condition
+                if (creationDate > nextRun || thresholdBoundary > nextRun) {
+                    nextRunArr = later.schedule(schedule).next(2, nextRun);
+                    nextRun = nextRunArr[1];
+                }
+
+                // Format output with day name
+                const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' };
+                document.getElementById('result').innerText = `Due Date: ${nextRun.toLocaleString(undefined, options)}`;
+            } catch (error) {
+                document.getElementById('result').innerText = "Invalid cron expression!";
+            }
+        }
+    </script>
+</body>
+</html>
