@@ -88,7 +88,14 @@
             let day = adjustedDate.getDay();
             let hours = adjustedDate.getHours();
             
-            if (day >= 1 && day <= 5 && hours >= 16) {
+            // Move to Monday 9 AM if created on Saturday or Sunday
+            if (day === 6) { // Saturday
+                adjustedDate.setDate(adjustedDate.getDate() + 2);
+                adjustedDate.setHours(9, 0, 0, 0);
+            } else if (day === 0) { // Sunday
+                adjustedDate.setDate(adjustedDate.getDate() + 1);
+                adjustedDate.setHours(9, 0, 0, 0);
+            } else if (day >= 1 && day <= 5 && hours >= 16) { // Weekday after 4 PM
                 adjustedDate.setDate(adjustedDate.getDate() + (day === 5 ? 3 : 1));
                 adjustedDate.setHours(9, 0, 0, 0);
             }
