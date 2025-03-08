@@ -43,19 +43,6 @@
         input, select, button {
             box-sizing: border-box;
         }
-        input {
-            background-color: #0F172A;
-            color: #d5dce3;
-            border: 1px solid #000;
-        }
-        input[type="datetime-local"] {
-            color-scheme: dark; /* Switch to dark mode */
-        }
-        input:-internal-autofill-selected, input:-webkit-autofill {
-            background-color: #0F172A !important;
-            color: #d5dce3;
-            border: 1px solid #000;
-        }
         button {
             background-color: #3498db;
             color: white;
@@ -75,6 +62,16 @@
             border-radius: 8px;
             font-weight: 600;
             border: 1px solid #000;
+            display: none;
+        }
+        .test-container {
+            margin-top: 30px;
+            padding: 20px;
+            background-color: #1E293B;
+            border-radius: 8px;
+        }
+        #test-results {
+            display: none;
         }
     </style>
 </head>
@@ -93,45 +90,52 @@
             <label for="creationDateTime">Creation Date</label>
             <input type="datetime-local" id="creationDateTime">
         </div>
-        <button onclick="calculateDueDate()">Calculate Due Date</button>
+        <button onclick="calculateDueDate(document.getElementById('creationDateTime').innerText.toString())">Calculate Due Date</button>
         <div class="result-container" id="result-container">
             <p id="result"></p>
         </div>
     </div>
 
+    <div class="test-container">
+        <h2>Test Cases</h2>
+        <button onclick="runTests()">Run Test Cases</button>
+        <div id="test-results"></div>
+    </div>
+
     <script>
         document.getElementById('creationDateTime').value = new Date().toISOString().slice(0, 16);
+
+        function formatDateWithDay(date) {
+            const options = { weekday: 'short', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' };
+            return date.toLocaleString('en-GB', options);
+        }
 
         function adjustForLateCreation(date) {
             let adjustedDate = new Date(date);
             let day = adjustedDate.getDay();
             let hours = adjustedDate.getHours();
             
-            // Move to Monday 9 AM if created on Saturday or Sunday
-            if (day === 6) { // Saturday
+            if (day === 6) { 
                 adjustedDate.setDate(adjustedDate.getDate() + 2);
                 adjustedDate.setHours(9, 0, 0, 0);
-            } else if (day === 0) { // Sunday
+            } else if (day === 0) { 
                 adjustedDate.setDate(adjustedDate.getDate() + 1);
                 adjustedDate.setHours(9, 0, 0, 0);
-            } else if (day >= 1 && day <= 5 && hours >= 16) { // Weekday after 4 PM
+            } else if (day >= 1 && day <= 5 && hours >= 16) { 
                 adjustedDate.setDate(adjustedDate.getDate() + (day === 5 ? 3 : 1));
                 adjustedDate.setHours(9, 0, 0, 0);
             }
             return adjustedDate;
         }
 
-        function formatDate(date) {
-            return date.toLocaleString();
-        }
-
-        function calculateDueDate() {
-            let creationDate = new Date(document.getElementById('creationDateTime').value);
+        function calculateDueDate(creationDateInput = null) {
+            let creationDate = creationDateInput || new Date(document.getElementById('creationDateTime').value);
             let cronExpression = document.getElementById('cronExpression').value;
             let threshold = parseInt(document.getElementById('threshold').value, 10) || 0;
 
             if (!cronExpression) {
-                document.getElementById('result').innerText = 'Please enter cron expression!';
+                document.getElementById('result').innerText = 'Please enter a cron expression!';
+                document.getElementById('result-container').style.display = 'none';
                 return;
             }
 
@@ -149,7 +153,65 @@
                 }
             }
 
-            document.getElementById('result').innerText = `Due Date: ${formatDate(nextRun)}`;
+            let formattedDueDate = formatDateWithDay(nextRun);
+
+            // If called from the button (no parameter), update UI
+            if (!creationDateInput) {
+                document.getElementById('result').innerText = `Due Date: ${formattedDueDate}`;
+                document.getElementById('result-container').style.display = 'block';
+            }
+
+            return formattedDueDate;
+        }
+
+
+        function runTests() {
+            let testDates = [
+                new Date(),
+                "Monday 07:02",
+                "Monday 11:42",
+                "Monday 16:15",
+                "Monday 19:27",
+                "Friday 07:02",
+                "Friday 16:30",
+                "Friday 18:02",
+                "Saturday 10:00",
+                "Sunday 10:00"
+            ];
+
+            let now = new Date();
+            let baseDate = new Date(now.setHours(0, 0, 0, 0));
+            
+            let testDateObjects = testDates.map((desc, index) => {
+                if (index === 0) return new Date(); 
+
+                let parts = desc.split(" ");
+                let dayName = parts[0];
+                let timeParts = parts[1].split(":");
+                let hours = parseInt(timeParts[0], 10);
+                let minutes = parseInt(timeParts[1], 10);
+
+                let dayMapping = {
+                    "Sunday": 0, "Monday": 1, "Tuesday": 2, "Wednesday": 3,
+                    "Thursday": 4, "Friday": 5, "Saturday": 6
+                };
+                let targetDay = dayMapping[dayName];
+                
+                let daysToAdd = (targetDay - baseDate.getDay() + 7) % 7;
+                let newDate = new Date(baseDate);
+                newDate.setDate(baseDate.getDate() + daysToAdd);
+                newDate.setHours(hours, minutes, 0, 0);
+                return newDate;
+            });
+
+            let resultsContainer = document.getElementById('test-results');
+            resultsContainer.innerHTML = "<h3>Test Results</h3>";
+            resultsContainer.style.display = 'block';
+
+            testDateObjects.forEach((testDate, index) => {
+                let dueDate = calculateDueDate(testDate);
+                resultsContainer.innerHTML += `<p>Test Case ${index + 1}: Created at ${formatDateWithDay(testDate)} → Due Date: ${dueDate}</p>`;
+            });
         }
     </script>
 </body>
