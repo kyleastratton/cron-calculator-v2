@@ -162,17 +162,21 @@
 
             let adjustedDate = adjustForLateCreation(creationDate);
             let schedule = later.parse.cron(cronExpression, true);
-            let nextRun = later.schedule(schedule).next(1, adjustedDate);
-
+            let thresholdEndDate = new Date(adjustedDate.getTime() + threshold * 60000);
+            // Get when the threshold period ends
+            let nextRun = later.schedule(schedule).next(1, thresholdEndDate);
             let thresholdBoundary = new Date(adjustedDate.getTime() + threshold * 60000);
-            let withinThreshold = adjustedDate > nextRun || thresholdBoundary > nextRun;
-
+            let withinThreshold = thresholdBoundary > nextRun;
+            let maxFuture = new Date();
+            maxFuture.setFullYear(maxFuture.getFullYear() + 1); // Prevents infinite jumps
+            if (nextRun > maxFuture) nextRun = later.schedule(schedule).next(1);
             if (withinThreshold) {
                 let nextRunArr = later.schedule(schedule).next(2, nextRun);
                 if (nextRunArr.length >= 2) {
                     nextRun = nextRunArr[1];
                 }
             }
+
 
             let formattedDueDate = formatDateWithDay(nextRun);
 
